@@ -1,6 +1,20 @@
+@font-face {
+    font-family: 'yardsale';
+    src: url('../fonts/yardsale.eot');
+    src: url('../fonts/yardsale.eot?#iefix') format('embedded-opentype'),
+         url('../fonts/yardsale.woff') format('woff'),
+         url('../fonts/yardsale.ttf') format('truetype'),
+         url('../fonts/yardsale.svg#yard_saleregular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+
+}
 body {
   padding-top: 20px;
   padding-bottom: 60px;
+  background: url('../img/micro_carbon.png') repeat #222;
+  color: #fcfcfc;
+  font-family: 'Open Sans', 'Helvetica Neue', Helvetica, sans-serif;
 }
 .container {
   margin: 0 auto;
@@ -8,16 +22,31 @@ body {
 }
 .container > hr {
   margin: 60px 0;
+  border: 1px dotted;
 }
 header {
-  margin: 80px 0;
+  margin: 60px 0;
   text-align: center;
 }
 header h1 {
+  font-family: 'yardsale', sans-serif;
   font-size: 100px;
+  font-weight: normal;
   line-height: 1;
 }
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 60px;
+  }
+}
+
 header .lead {
   font-size: 24px;
   line-height: 1.25;
+}
+#features {
+  margin-bottom: 2em;
+}
+.hilight {
+  color: #C59A6F;
 }

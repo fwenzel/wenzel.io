@@ -2,3 +2,5 @@ title: wenzel.io
 description: Fred Wenzel's portfolio and project playground
 author: Fred Wenzel
 analytics: ...
+
+exclude: ['README.md']
