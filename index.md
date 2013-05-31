@@ -7,8 +7,7 @@ layout: default
   <p>Welcome to my portfolio and project playground.</p>
 </header>
 
-<h2><span class="hilight">Featured</span> projects</h2>
-<div class="row-fluid" id="features">
+<div class="row-fluid projects" id="features">
   <div class="span3">
     <a href="/projects/imagetwist.html">
       <div class="featpic">
@@ -47,9 +46,40 @@ layout: default
   </div>
 </div>
 
-<h2><span class="hilight">All</span> projects</h2>
-<div class="row-fluid">
-  <div class="span12">
-    <p>Check out my <a href="https://github.com/fwenzel">Github account</a>.</p>
+<div class="row-fluid projects">
+  <div class="span3">
+    <h3>tablebot</h3>
+    <p>A turntable.fm bot written in node.js.</p>
+  </div>
+  <div class="span3">
+    <h3>tablebot</h3>
+    <p>A turntable.fm bot written in node.js.</p>
+  </div>
+  <div class="span3">
+    <h3>tablebot</h3>
+    <p>A turntable.fm bot written in node.js.</p>
+  </div>
+  <div class="span3">
+    <h3>tablebot</h3>
+    <p>A turntable.fm bot written in node.js.</p>
+  </div>
+</div>
+
+<div class="row-fluid projects">
+  <div class="span3">
+    <h3>tablebot</h3>
+    <p>A turntable.fm bot written in node.js.</p>
+  </div>
+  <div class="span3">
+    <h3>tablebot</h3>
+    <p>A turntable.fm bot written in node.js.</p>
+  </div>
+  <div class="span3">
+    <h3>tablebot</h3>
+    <p>A turntable.fm bot written in node.js.</p>
+  </div>
+  <div class="span3">
+    <h3>tablebot</h3>
+    <p>A turntable.fm bot written in node.js.</p>
   </div>
 </div>

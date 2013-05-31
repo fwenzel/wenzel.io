@@ -37,7 +37,7 @@ header .lead {
   margin-bottom: 2em;
 }
 .featpic {
-  border-radius: 25px;
+  border-radius: 5px;
   height: 180px;
   overflow: hidden;
   position: relative;
@@ -63,7 +63,7 @@ header .lead {
   max-height: 106%;
   opacity: 1;
 }
-#features h3 {
+.projects h3 {
   color: #C59A6F;
   font-size: 16px;
   line-height: 1.5;
