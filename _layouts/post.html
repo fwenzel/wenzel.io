@@ -1,0 +1,20 @@
+---
+layout: default
+---
+<section id="post">
+  <h2>{{ page.title }}</h2>
+
+  {% if page.img %}<img src="/img/{{ page.img }}">{% endif %}
+
+  {{ content }}
+
+  <section id="links">
+    {% if page.website %}
+      <a href="{{ page.website }}" class="btn btn-inverse">Visit project website</a>
+    {% endif %}
+
+    {% if page.code %}
+      <a href="{{ page.code }}" class="btn btn-inverse">View the source code</a>
+    {% endif %}
+  </section>
+</section>

@@ -4,7 +4,17 @@ body {
   background: url('../img/micro_carbon.png') repeat #222;
   color: #fcfcfc;
   font-family: 'Open Sans', 'Helvetica Neue', Helvetica, sans-serif;
+  font-size: 16px;
 }
+
+a,
+a:hover,
+a:active,
+a:visited,
+a:focus {
+  color: #C59A6F;
+}
+
 .container {
   margin: 0 auto;
   max-width: 1000px;
@@ -15,11 +25,18 @@ header {
   text-align: center;
 }
 header h1 {
-  color: #393939;
   float: left;
   font-size: 70px;
   font-weight: 600;
   letter-spacing: -2px;
+}
+header a {
+  color: #333;
+}
+header a:hover,
+header a:visited {
+  color: #393939;
+  text-decoration: none;
 }
 
 header .lead {
@@ -28,9 +45,10 @@ header .lead {
   line-height: 1.25;
 }
 
-#features {
+.projects {
   margin-bottom: 2em;
 }
+
 .featpic {
   height: 180px;
   overflow: hidden;
@@ -57,6 +75,7 @@ header .lead {
   max-height: 106%;
   opacity: 1;
 }
+
 .projects h3 {
   color: #C59A6F;
   font-size: 16px;
@@ -65,6 +84,28 @@ header .lead {
 
 .hilight {
   color: #C59A6F;
+}
+
+#post {
+  line-height: 1.5;
+}
+
+#post h2 {
+  color: #C59A6F;
+}
+
+#post > img {
+  margin-bottom: 2em;
+  max-width: 200px;
+}
+
+#links {
+  margin-top: 3em;
+}
+
+#links .btn {
+  color: #fcfcfc;
+  margin-right: .5em;
 }
 
 footer {

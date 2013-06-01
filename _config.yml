@@ -1,6 +1,9 @@
 title: wenzel.io
 description: Fred Wenzel's portfolio and project playground
 author: Fred Wenzel
-analytics: ...
 
+analytics: ...
+url: http://wenzel.io
+
+permalink: /projects/:title
 exclude: ['README.md']
