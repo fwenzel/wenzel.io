@@ -22,10 +22,14 @@
 
   <body>
     <div class="container">
-      <header>
-        <h1><a href="{{ site.url }}">Fred Wenzel</a></h1>
-        <p class="hilight">Engineering manager at Mozilla, full stack web developer, Pythonista.</p>
-        <p>Welcome to my portfolio and project playground.</p>
+      <header class="row-fluid">
+        <div class="span5">
+          <h1><a href="{{ site.url }}">Fred Wenzel</a></h1>
+        </div>
+        <div class="span7">
+          <p class="hilight">Engineering manager at Mozilla, full stack web developer, Pythonista.</p>
+          <p>Welcome to my portfolio and project playground.</p>
+        </div>
       </header>
 
       {{ content }}
