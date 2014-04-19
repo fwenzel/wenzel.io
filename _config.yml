@@ -7,3 +7,5 @@ url: http://wenzel.io
 
 permalink: /projects/:title
 exclude: ['README.md']
+
+markdown: kramdown
