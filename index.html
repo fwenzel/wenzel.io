@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>wenzel.io</title>
+    <link
+      rel="icon"
+      href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="%23050608"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="Georgia, Times New Roman, serif" font-size="42" fill="%23b0b0b0">W</text></svg>'
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #050608;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <script>
+      class AnimationEngine {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this.animations = new Map();
+          this.active = null;
+          this.lastTime = 0;
+          this.resizeObserver = null;
+        }
+
+        register(name, animation) {
+          this.animations.set(name, animation);
+        }
+
+        start(name) {
+          const next = this.animations.get(name);
+          if (!next) {
+            throw new Error(`Unknown animation: ${name}`);
+          }
+          this.active = next;
+          this.active.init(this.ctx, this.canvas);
+          this.lastTime = performance.now();
+          requestAnimationFrame((t) => this.tick(t));
+        }
+
+        tick(time) {
+          if (!this.active) return;
+          const dt = Math.min(64, time - this.lastTime);
+          this.lastTime = time;
+          this.active.update(dt);
+          this.active.render();
+          requestAnimationFrame((t) => this.tick(t));
+        }
+
+        bindResize() {
+          const resize = () => {
+            const { width, height } = this.canvas.getBoundingClientRect();
+            const scale = window.devicePixelRatio || 1;
+            this.canvas.width = Math.max(1, Math.floor(width * scale));
+            this.canvas.height = Math.max(1, Math.floor(height * scale));
+            this.ctx.setTransform(scale, 0, 0, scale, 0, 0);
+            if (this.active) this.active.onResize(width, height);
+          };
+
+          if ("ResizeObserver" in window) {
+            this.resizeObserver = new ResizeObserver(resize);
+            this.resizeObserver.observe(this.canvas);
+          } else {
+            window.addEventListener("resize", resize);
+          }
+          resize();
+        }
+      }
+
+      class MystifyAnimation {
+        constructor() {
+          this.ctx = null;
+          this.canvas = null;
+          this.width = 0;
+          this.height = 0;
+          this.groups = [];
+          this.fade = 0.1;
+          this.time = 0;
+          this.label = null;
+          this.labelMetrics = null;
+        }
+
+        init(ctx, canvas) {
+          this.ctx = ctx;
+          this.canvas = canvas;
+          this.reset();
+        }
+
+        reset() {
+          this.groups = [];
+          const groupCount = 3;
+          const pointsPerGroup = 5;
+          for (let i = 0; i < groupCount; i += 1) {
+            const hue = Math.floor(Math.random() * 360);
+            const points = [];
+            const velocities = [];
+            for (let p = 0; p < pointsPerGroup; p += 1) {
+              points.push({
+                x: Math.random() * this.width,
+                y: Math.random() * this.height,
+              });
+              const speed = 40 + Math.random() * 80;
+              const angle = Math.random() * Math.PI * 2;
+              velocities.push({
+                x: Math.cos(angle) * speed,
+                y: Math.sin(angle) * speed,
+              });
+            }
+            this.groups.push({ hue, points, velocities });
+          }
+          this.labelMetrics = this.computeLabelMetrics();
+          this.label = this.buildLabel();
+        }
+
+        onResize(width, height) {
+          this.width = width;
+          this.height = height;
+          this.ctx.fillStyle = "black";
+          this.ctx.fillRect(0, 0, width, height);
+          this.reset();
+        }
+
+        update(dt) {
+          this.time += dt / 1000;
+          this.updateLabel(dt / 1000);
+          const step = dt / 1000;
+          for (const group of this.groups) {
+            group.points.forEach((pt, i) => {
+              const vel = group.velocities[i];
+              pt.x += vel.x * step;
+              pt.y += vel.y * step;
+              if (pt.x <= 0 || pt.x >= this.width) vel.x *= -1;
+              if (pt.y <= 0 || pt.y >= this.height) vel.y *= -1;
+              pt.x = Math.max(0, Math.min(this.width, pt.x));
+              pt.y = Math.max(0, Math.min(this.height, pt.y));
+            });
+          }
+        }
+
+        render() {
+          const ctx = this.ctx;
+          ctx.fillStyle = `rgba(0, 0, 0, ${this.fade})`;
+          ctx.fillRect(0, 0, this.width, this.height);
+          ctx.lineWidth = 2;
+          ctx.globalCompositeOperation = "lighter";
+
+          for (const group of this.groups) {
+            ctx.strokeStyle = `hsla(${group.hue}, 90%, 65%, 0.85)`;
+            ctx.beginPath();
+            group.points.forEach((pt, idx) => {
+              if (idx === 0) {
+                ctx.moveTo(pt.x, pt.y);
+              } else {
+                ctx.lineTo(pt.x, pt.y);
+              }
+            });
+            ctx.closePath();
+            ctx.stroke();
+          }
+
+          ctx.globalCompositeOperation = "source-over";
+          this.renderLabels();
+        }
+
+        buildLabel() {
+          if (!this.labelMetrics) {
+            this.labelMetrics = this.computeLabelMetrics();
+          }
+          const { width: textWidth, height: textHeight, margin } =
+            this.labelMetrics;
+          const minX = margin + textWidth / 2;
+          const maxX = Math.max(minX, this.width - margin - textWidth / 2);
+          const minY = margin + textHeight / 2;
+          const maxY = Math.max(minY, this.height - margin - textHeight / 2);
+          return {
+            x: minX + Math.random() * (maxX - minX),
+            y: minY + Math.random() * (maxY - minY),
+            alpha: 0,
+            direction: 1,
+            speed: 0.08 + Math.random() * 0.05,
+          };
+        }
+
+        updateLabel(step) {
+          if (!this.label) return;
+          this.label.alpha += this.label.direction * this.label.speed * step;
+          if (this.label.alpha >= 0.5) {
+            this.label.alpha = 0.5;
+            this.label.direction = -1;
+          }
+          if (this.label.alpha <= 0) {
+            this.label = this.buildLabel();
+          }
+        }
+
+        renderLabels() {
+          const ctx = this.ctx;
+          const size = Math.max(18, Math.min(this.width, this.height) * 0.06);
+          ctx.font = `${size}px "Georgia", "Times New Roman", serif`;
+          ctx.textBaseline = "middle";
+          ctx.textAlign = "center";
+          if (!this.label) return;
+          ctx.fillStyle = `rgba(170, 170, 170, ${this.label.alpha})`;
+          ctx.fillText("wenzel.io", this.label.x, this.label.y);
+        }
+
+        computeLabelMetrics() {
+          const size = Math.max(18, Math.min(this.width, this.height) * 0.06);
+          this.ctx.font = `${size}px "Georgia", "Times New Roman", serif`;
+          const metrics = this.ctx.measureText("wenzel.io");
+          const textWidth = metrics.width;
+          const textHeight = Math.max(
+            size,
+            metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+          );
+          const margin = Math.max(24, size * 0.75);
+          return { width: textWidth, height: textHeight, margin };
+        }
+      }
+
+      const canvas = document.getElementById("stage");
+      const engine = new AnimationEngine(canvas);
+      engine.register("mystify", new MystifyAnimation());
+      engine.bindResize();
+      engine.start("mystify");
+    </script>
+  </body>
+</html>
