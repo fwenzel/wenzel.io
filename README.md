@@ -22,3 +22,9 @@ npm run build
 npm run serve
 ```
 Then open http://localhost:5173.
+
+Develop
+```sh
+npm run dev
+```
+This serves `src/` directly at http://localhost:5173.

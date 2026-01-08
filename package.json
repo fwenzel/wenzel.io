@@ -5,6 +5,7 @@
   "scripts": {
     "build": "node scripts/build.js",
     "clean": "rm -rf docs",
+    "dev": "serve src -l 5173",
     "serve": "serve docs -l 5173"
   },
   "devDependencies": {
