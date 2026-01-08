@@ -49,8 +49,13 @@
           this.ctx = canvas.getContext("2d");
           this.animations = new Map();
           this.active = null;
+          this.activeName = null;
+          this.overlay = null;
           this.lastTime = 0;
           this.resizeObserver = null;
+          this.transition = null;
+          this.viewportWidth = 0;
+          this.viewportHeight = 0;
         }
 
         register(name, animation) {
@@ -63,7 +68,11 @@
             throw new Error(`Unknown animation: ${name}`);
           }
           this.active = next;
+          this.activeName = name;
           this.active.init(this.ctx, this.canvas);
+          if (this.overlay) {
+            this.overlay.init(this.ctx, this.canvas);
+          }
           this.lastTime = performance.now();
           requestAnimationFrame((t) => this.tick(t));
         }
@@ -73,7 +82,16 @@
           const dt = Math.min(64, time - this.lastTime);
           this.lastTime = time;
           this.active.update(dt);
+          if (this.overlay) {
+            this.overlay.update(dt);
+          }
           this.active.render();
+          if (this.overlay) {
+            this.overlay.render();
+          }
+          if (this.transition) {
+            this.renderTransition(dt);
+          }
           requestAnimationFrame((t) => this.tick(t));
         }
 
@@ -84,7 +102,10 @@
             this.canvas.width = Math.max(1, Math.floor(width * scale));
             this.canvas.height = Math.max(1, Math.floor(height * scale));
             this.ctx.setTransform(scale, 0, 0, scale, 0, 0);
+            this.viewportWidth = width;
+            this.viewportHeight = height;
             if (this.active) this.active.onResize(width, height);
+            if (this.overlay) this.overlay.onResize(width, height);
           };
 
           if ("ResizeObserver" in window) {
@@ -95,17 +116,62 @@
           }
           resize();
         }
+
+        setOverlay(overlay) {
+          this.overlay = overlay;
+        }
+
+        switchTo(name) {
+          if (!name || name === this.activeName) return;
+          const next = this.animations.get(name);
+          if (!next) {
+            throw new Error(`Unknown animation: ${name}`);
+          }
+          this.transition = {
+            phase: "out",
+            elapsed: 0,
+            duration: 800,
+            nextName: name,
+          };
+        }
+
+        renderTransition(dt) {
+          if (!this.transition) return;
+          const ctx = this.ctx;
+          const transition = this.transition;
+          transition.elapsed += dt;
+          const progress = Math.min(1, transition.elapsed / transition.duration);
+          if (transition.phase === "out" && progress >= 1) {
+            const next = this.animations.get(transition.nextName);
+            this.active = next;
+            this.activeName = transition.nextName;
+            this.active.init(this.ctx, this.canvas);
+            if (this.viewportWidth && this.viewportHeight) {
+              this.active.onResize(this.viewportWidth, this.viewportHeight);
+            }
+            transition.phase = "in";
+            transition.elapsed = 0;
+          }
+          const alpha =
+            transition.phase === "out"
+              ? progress
+              : 1 - Math.min(1, transition.elapsed / transition.duration);
+          ctx.save();
+          ctx.fillStyle = `rgba(5, 6, 8, ${alpha})`;
+          ctx.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
+          ctx.restore();
+          if (transition.phase === "in" && transition.elapsed >= transition.duration) {
+            this.transition = null;
+          }
+        }
       }
 
-      class MystifyAnimation {
+      class LabelOverlay {
         constructor() {
           this.ctx = null;
           this.canvas = null;
           this.width = 0;
           this.height = 0;
-          this.groups = [];
-          this.fade = 0.1;
-          this.time = 0;
           this.label = null;
           this.labelMetrics = null;
           this.glitchTimer = 0;
@@ -115,83 +181,25 @@
         init(ctx, canvas) {
           this.ctx = ctx;
           this.canvas = canvas;
-          this.reset();
-        }
-
-        reset() {
-          this.groups = [];
-          const groupCount = 3;
-          const pointsPerGroup = 5;
-          for (let i = 0; i < groupCount; i += 1) {
-            const hue = Math.floor(Math.random() * 360);
-            const points = [];
-            const velocities = [];
-            for (let p = 0; p < pointsPerGroup; p += 1) {
-              points.push({
-                x: Math.random() * this.width,
-                y: Math.random() * this.height,
-              });
-              const speed = 40 + Math.random() * 80;
-              const angle = Math.random() * Math.PI * 2;
-              velocities.push({
-                x: Math.cos(angle) * speed,
-                y: Math.sin(angle) * speed,
-              });
-            }
-            this.groups.push({ hue, points, velocities });
+          if (this.width && this.height) {
+            this.labelMetrics = this.computeLabelMetrics();
+            this.label = this.buildLabel();
           }
-          this.labelMetrics = this.computeLabelMetrics();
-          this.label = this.buildLabel();
         }
 
         onResize(width, height) {
           this.width = width;
           this.height = height;
-          this.ctx.fillStyle = "black";
-          this.ctx.fillRect(0, 0, width, height);
-          this.reset();
+          this.labelMetrics = this.computeLabelMetrics();
+          this.label = this.buildLabel();
         }
 
         update(dt) {
-          this.time += dt / 1000;
           this.updateLabel(dt / 1000);
           this.updateGlitch(dt / 1000);
-          const step = dt / 1000;
-          for (const group of this.groups) {
-            group.points.forEach((pt, i) => {
-              const vel = group.velocities[i];
-              pt.x += vel.x * step;
-              pt.y += vel.y * step;
-              if (pt.x <= 0 || pt.x >= this.width) vel.x *= -1;
-              if (pt.y <= 0 || pt.y >= this.height) vel.y *= -1;
-              pt.x = Math.max(0, Math.min(this.width, pt.x));
-              pt.y = Math.max(0, Math.min(this.height, pt.y));
-            });
-          }
         }
 
         render() {
-          const ctx = this.ctx;
-          ctx.fillStyle = `rgba(0, 0, 0, ${this.fade})`;
-          ctx.fillRect(0, 0, this.width, this.height);
-          ctx.lineWidth = 2;
-          ctx.globalCompositeOperation = "lighter";
-
-          for (const group of this.groups) {
-            ctx.strokeStyle = `hsla(${group.hue}, 90%, 65%, 0.85)`;
-            ctx.beginPath();
-            group.points.forEach((pt, idx) => {
-              if (idx === 0) {
-                ctx.moveTo(pt.x, pt.y);
-              } else {
-                ctx.lineTo(pt.x, pt.y);
-              }
-            });
-            ctx.closePath();
-            ctx.stroke();
-          }
-
-          ctx.globalCompositeOperation = "source-over";
           this.renderLabels();
         }
 
@@ -356,11 +364,229 @@
         }
       }
 
+      class MystifyAnimation {
+        constructor() {
+          this.ctx = null;
+          this.canvas = null;
+          this.width = 0;
+          this.height = 0;
+          this.groups = [];
+          this.fade = 0.1;
+          this.time = 0;
+        }
+
+        init(ctx, canvas) {
+          this.ctx = ctx;
+          this.canvas = canvas;
+          this.reset();
+        }
+
+        reset() {
+          this.groups = [];
+          const groupCount = 3;
+          const pointsPerGroup = 5;
+          for (let i = 0; i < groupCount; i += 1) {
+            const hue = Math.floor(Math.random() * 360);
+            const points = [];
+            const velocities = [];
+            for (let p = 0; p < pointsPerGroup; p += 1) {
+              points.push({
+                x: Math.random() * this.width,
+                y: Math.random() * this.height,
+              });
+              const speed = 40 + Math.random() * 80;
+              const angle = Math.random() * Math.PI * 2;
+              velocities.push({
+                x: Math.cos(angle) * speed,
+                y: Math.sin(angle) * speed,
+              });
+            }
+            this.groups.push({ hue, points, velocities });
+          }
+        }
+
+        onResize(width, height) {
+          this.width = width;
+          this.height = height;
+          this.ctx.fillStyle = "black";
+          this.ctx.fillRect(0, 0, width, height);
+          this.reset();
+        }
+
+        update(dt) {
+          this.time += dt / 1000;
+          const step = dt / 1000;
+          for (const group of this.groups) {
+            group.points.forEach((pt, i) => {
+              const vel = group.velocities[i];
+              pt.x += vel.x * step;
+              pt.y += vel.y * step;
+              if (pt.x <= 0 || pt.x >= this.width) vel.x *= -1;
+              if (pt.y <= 0 || pt.y >= this.height) vel.y *= -1;
+              pt.x = Math.max(0, Math.min(this.width, pt.x));
+              pt.y = Math.max(0, Math.min(this.height, pt.y));
+            });
+          }
+        }
+
+        render() {
+          const ctx = this.ctx;
+          ctx.fillStyle = `rgba(0, 0, 0, ${this.fade})`;
+          ctx.fillRect(0, 0, this.width, this.height);
+          ctx.lineWidth = 2;
+          ctx.globalCompositeOperation = "lighter";
+
+          for (const group of this.groups) {
+            ctx.strokeStyle = `hsla(${group.hue}, 90%, 65%, 0.85)`;
+            ctx.beginPath();
+            group.points.forEach((pt, idx) => {
+              if (idx === 0) {
+                ctx.moveTo(pt.x, pt.y);
+              } else {
+                ctx.lineTo(pt.x, pt.y);
+              }
+            });
+            ctx.closePath();
+            ctx.stroke();
+          }
+
+          ctx.globalCompositeOperation = "source-over";
+        }
+      }
+
+      class PretzelAnimation {
+        constructor() {
+          this.ctx = null;
+          this.canvas = null;
+          this.width = 0;
+          this.height = 0;
+          this.pretzels = [];
+          this.sprites = [];
+          this.fade = 0.2;
+        }
+
+        init(ctx, canvas) {
+          this.ctx = ctx;
+          this.canvas = canvas;
+          this.sprites = this.buildPretzelSprites();
+          this.reset();
+        }
+
+        onResize(width, height) {
+          this.width = width;
+          this.height = height;
+          this.ctx.fillStyle = "black";
+          this.ctx.fillRect(0, 0, width, height);
+          this.reset();
+        }
+
+        reset() {
+          const density = Math.max(8, Math.min(24, (this.width * this.height) / 40000));
+          const count = Math.round(density);
+          this.pretzels = Array.from({ length: count }, () => this.spawnPretzel());
+        }
+
+        spawnPretzel() {
+          const sprite = this.sprites[Math.floor(Math.random() * this.sprites.length)];
+          const size = 36 + Math.random() * 110;
+          const speed = 30 + Math.random() * 90;
+          const edge = Math.floor(Math.random() * 4);
+          let x = 0;
+          let y = 0;
+          let angle = 0;
+          if (edge === 0) {
+            x = -size;
+            y = Math.random() * this.height;
+            angle = (-0.35 + Math.random() * 0.7) * Math.PI;
+          } else if (edge === 1) {
+            x = this.width + size;
+            y = Math.random() * this.height;
+            angle = (0.65 + Math.random() * 0.7) * Math.PI;
+          } else if (edge === 2) {
+            x = Math.random() * this.width;
+            y = -size;
+            angle = (0.15 + Math.random() * 0.7) * Math.PI;
+          } else {
+            x = Math.random() * this.width;
+            y = this.height + size;
+            angle = (-0.85 + Math.random() * 0.7) * Math.PI;
+          }
+          return {
+            sprite,
+            x,
+            y,
+            size,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (-0.7 + Math.random() * 1.4) * Math.PI,
+            alpha: 0.5 + Math.random() * 0.4,
+          };
+        }
+
+        update(dt) {
+          const step = dt / 1000;
+          const margin = 180;
+          for (let i = 0; i < this.pretzels.length; i += 1) {
+            const pretzel = this.pretzels[i];
+            pretzel.x += pretzel.vx * step;
+            pretzel.y += pretzel.vy * step;
+            pretzel.rotation += pretzel.rotationSpeed * step;
+            if (
+              pretzel.x < -margin ||
+              pretzel.x > this.width + margin ||
+              pretzel.y < -margin ||
+              pretzel.y > this.height + margin
+            ) {
+              this.pretzels[i] = this.spawnPretzel();
+            }
+          }
+        }
+
+        render() {
+          const ctx = this.ctx;
+          ctx.fillStyle = `rgba(5, 6, 8, ${this.fade})`;
+          ctx.fillRect(0, 0, this.width, this.height);
+          for (const pretzel of this.pretzels) {
+            const sprite = pretzel.sprite;
+            if (!sprite || !sprite.complete) continue;
+            const scale = pretzel.size / sprite.width;
+            const drawWidth = sprite.width * scale;
+            const drawHeight = sprite.height * scale;
+            ctx.save();
+            ctx.translate(pretzel.x, pretzel.y);
+            ctx.rotate(pretzel.rotation);
+            ctx.globalAlpha = pretzel.alpha;
+            ctx.drawImage(sprite, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+            ctx.restore();
+          }
+        }
+
+        buildPretzelSprites() {
+          const sprite = new Image();
+          sprite.src = "img/pretzel.svg";
+          return [sprite];
+        }
+      }
+
       const canvas = document.getElementById("stage");
       const engine = new AnimationEngine(canvas);
+      engine.setOverlay(new LabelOverlay());
       engine.register("mystify", new MystifyAnimation());
+      engine.register("pretzels", new PretzelAnimation());
       engine.bindResize();
-      engine.start("mystify");
+      const animationNames = Array.from(engine.animations.keys());
+      const pickRandomAnimation = (exclude) => {
+        const options = animationNames.filter((name) => name !== exclude);
+        if (options.length === 0) return exclude;
+        return options[Math.floor(Math.random() * options.length)];
+      };
+      const randomAnimation = pickRandomAnimation(null);
+      engine.start(randomAnimation);
+      window.setInterval(() => {
+        const next = pickRandomAnimation(engine.activeName);
+        engine.switchTo(next);
+      }, 10000);
     </script>
   </body>
 </html>
