@@ -2,6 +2,7 @@ import { AnimationEngine } from "./engine.js";
 import { MystifyAnimation } from "./animations/mystify.js";
 import { PongAnimation } from "./animations/pong.js";
 import { PretzelAnimation } from "./animations/pretzels.js";
+import { DvdAnimation } from "./animations/dvd.js";
 import { LabelOverlay } from "./overlays/labelOverlay.js";
 
 const canvas = document.getElementById("stage");
@@ -10,6 +11,7 @@ engine.setOverlay(new LabelOverlay());
 engine.register("mystify", new MystifyAnimation());
 engine.register("pong", new PongAnimation());
 engine.register("pretzels", new PretzelAnimation());
+engine.register("dvd", new DvdAnimation());
 engine.bindResize();
 
 const animationNames = Array.from(engine.animations.keys());
